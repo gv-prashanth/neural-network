@@ -1,6 +1,7 @@
 package com.vadrin.neuralnetwork.controllers;
 
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
 
 import org.slf4j.Logger;
@@ -19,7 +20,9 @@ public class NeuralNetworkRunner implements CommandLineRunner {
 	@Override
 	public void run(String... args) throws Exception {
 		log.info("Starting the CommandLineRunner at {}", dateFormat.format(new Date()));
-		NeuralNetwork neuralNetwork = new NeuralNetwork();
+		NeuralNetwork neuralNetwork = new NeuralNetwork(5, 4, 4, 3);
+		double[] feedForwardOutput = neuralNetwork.feedForward(0.2, 0.3, 0.4, 0.7, 0.1);
+		log.info("Network Output is {}", Arrays.toString(feedForwardOutput));
 		log.info("Finished the CommandLineRunner at {}", dateFormat.format(new Date()));
 	}
 
