@@ -1,17 +1,21 @@
 package com.vadrin.neuralnetwork.models;
 
+import java.util.function.DoubleFunction;
+
 import com.vadrin.neuralnetwork.commons.exceptions.InvalidInputException;
 
 public class NeuralNetwork {
 
 	private int[] neuronsPerLayer;
+	private DoubleFunction<Double> activationFunction;
 	private double[][] neuronOutputs; // Layer, NeuronPos
 	private double[][] neuronBiases; // Layer, NeuronPos
 	private double[][][] networkWeights; // Layer, ThisLayerNeuronPos, PrevLayerNeuronPos
 
-	public NeuralNetwork(int... neuronsPerLayer) {
+	public NeuralNetwork(int[] neuronsPerLayer, DoubleFunction<Double> activationFunction) {
 		super();
 		this.neuronsPerLayer = neuronsPerLayer;
+		this.activationFunction = activationFunction;
 		neuronOutputs = new double[neuronsPerLayer.length][];
 		neuronBiases = new double[neuronsPerLayer.length][];
 		networkWeights = new double[neuronsPerLayer.length][][];
@@ -41,16 +45,12 @@ public class NeuralNetwork {
 							* neuronOutputs[layerIndex - 1][prevLayerNeuronIndex];
 				}
 				temp += neuronBiases[layerIndex][thisLayerNeuronIndex];
-				neuronOutputs[layerIndex][thisLayerNeuronIndex] = sigmoid(temp);
+				neuronOutputs[layerIndex][thisLayerNeuronIndex] = activationFunction.apply(temp);
 			}
 		}
 
 		// Return last layer output
 		return neuronOutputs[neuronsPerLayer.length - 1];
-	}
-
-	public double sigmoid(double input) {
-		return 1d / (1d + Math.exp(-input));
 	}
 
 }
