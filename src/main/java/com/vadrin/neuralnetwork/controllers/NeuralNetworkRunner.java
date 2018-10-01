@@ -9,7 +9,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Controller;
 
-import com.vadrin.neuralnetwork.models.NeuralNetwork;
+import com.vadrin.neuralnetwork.models.NetworkConfig;
+import com.vadrin.neuralnetwork.models.TrainingSet;
+import com.vadrin.neuralnetwork.services.NeuralNetwork;
 
 @Controller
 public class NeuralNetworkRunner implements CommandLineRunner {
@@ -20,11 +22,19 @@ public class NeuralNetworkRunner implements CommandLineRunner {
 	@Override
 	public void run(String... args) throws Exception {
 		log.info("Starting the CommandLineRunner at {}", dateFormat.format(new Date()));
-		int[] neuronsPerLayer = { 5, 4, 4, 3 };
-		NeuralNetwork neuralNetwork = new NeuralNetwork(neuronsPerLayer, (input) -> 1d / (1d + Math.exp(-input)), 0.3,
-				0.7, -0.5, 0.7);
-		neuralNetwork.feedForward(0.2, 0.3, 0.4, 0.7, 0.1);
-		double[] feedForwardOutput = neuralNetwork.getOutput();
+		NetworkConfig networkConfig = new NetworkConfig((input) -> 1d / (1d + Math.exp(-input)), 5, 4, 4, 3);
+		NeuralNetwork neuralNetwork = new NeuralNetwork(networkConfig);
+		double[] input = { 5, 0.3, 10, 0.7, 0.1 };
+		double[] target = { 1, 0, 0 };
+		TrainingSet trainingSet = new TrainingSet(input, target);
+		for (int i = 0; i < 10000; i++) {
+			neuralNetwork.train(trainingSet);
+			if (i % 100 == 0) {
+				double[] trainingOutput = neuralNetwork.getOutput();
+				log.info("Training Output is {}", Arrays.toString(trainingOutput));
+			}
+		}
+		double[] feedForwardOutput = neuralNetwork.process(input);
 		log.info("Network Output is {}", Arrays.toString(feedForwardOutput));
 		log.info("Finished the CommandLineRunner at {}", dateFormat.format(new Date()));
 	}
