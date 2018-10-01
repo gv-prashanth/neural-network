@@ -21,8 +21,10 @@ public class NeuralNetworkRunner implements CommandLineRunner {
 	public void run(String... args) throws Exception {
 		log.info("Starting the CommandLineRunner at {}", dateFormat.format(new Date()));
 		int[] neuronsPerLayer = { 5, 4, 4, 3 };
-		NeuralNetwork neuralNetwork = new NeuralNetwork(neuronsPerLayer, (input) -> 1d / (1d + Math.exp(-input)));
-		double[] feedForwardOutput = neuralNetwork.feedForward(0.2, 0.3, 0.4, 0.7, 0.1);
+		NeuralNetwork neuralNetwork = new NeuralNetwork(neuronsPerLayer, (input) -> 1d / (1d + Math.exp(-input)), 0.3,
+				0.7, -0.5, 0.7);
+		neuralNetwork.feedForward(0.2, 0.3, 0.4, 0.7, 0.1);
+		double[] feedForwardOutput = neuralNetwork.getOutput();
 		log.info("Network Output is {}", Arrays.toString(feedForwardOutput));
 		log.info("Finished the CommandLineRunner at {}", dateFormat.format(new Date()));
 	}
