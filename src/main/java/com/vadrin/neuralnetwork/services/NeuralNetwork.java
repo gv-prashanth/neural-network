@@ -1,10 +1,12 @@
 package com.vadrin.neuralnetwork.services;
 
+import java.util.Iterator;
 import java.util.function.DoubleFunction;
 
 import com.vadrin.neuralnetwork.commons.exceptions.InvalidInputException;
 import com.vadrin.neuralnetwork.commons.utils.ArrayUtils;
 import com.vadrin.neuralnetwork.models.NetworkConfig;
+import com.vadrin.neuralnetwork.models.TrainingExample;
 import com.vadrin.neuralnetwork.models.TrainingSet;
 
 public class NeuralNetwork {
@@ -51,8 +53,15 @@ public class NeuralNetwork {
 		return getOutput();
 	}
 
-	public void train(TrainingSet trainingSet) throws InvalidInputException {
-		backPropagate(trainingSet.getInput(), trainingSet.getOutput());
+	public void train(TrainingExample trainingExample) throws InvalidInputException {
+		train(trainingExample.getInput(), trainingExample.getOutput());
+	}
+
+	public void train(TrainingSet<TrainingExample> trainingSet) throws InvalidInputException {
+		Iterator<TrainingExample> iterator = trainingSet.iterator();
+		while (iterator.hasNext()) {
+			train(iterator.next());
+		}
 	}
 
 	private void feedForward(double... networkInput) throws InvalidInputException {
@@ -84,7 +93,8 @@ public class NeuralNetwork {
 
 	}
 
-	private void backPropagate(double[] input, double[] desiredOutput) throws InvalidInputException {
+	// Backproprage
+	private void train(double[] input, double[] desiredOutput) throws InvalidInputException {
 		if (input.length != neuronsPerLayer[0] || desiredOutput.length != neuronsPerLayer[neuronsPerLayer.length - 1])
 			throw new InvalidInputException();
 

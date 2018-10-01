@@ -1,22 +1,7 @@
 package com.vadrin.neuralnetwork.models;
 
-public class TrainingSet {
+import java.util.HashSet;
 
-	double[] input;
-	double[] output;
-
-	public TrainingSet(double[] input, double[] output) {
-		super();
-		this.input = input;
-		this.output = output;
-	}
-
-	public double[] getInput() {
-		return input;
-	}
-
-	public double[] getOutput() {
-		return output;
-	}
+public class TrainingSet<TrainingExample> extends HashSet<TrainingExample> {
 
 }
