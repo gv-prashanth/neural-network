@@ -1,6 +1,10 @@
 package com.vadrin.neuralnetwork.services;
 
+import java.util.Arrays;
 import java.util.function.DoubleFunction;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.vadrin.neuralnetwork.commons.exceptions.InvalidInputException;
 import com.vadrin.neuralnetwork.commons.utils.ArrayUtils;
@@ -19,6 +23,8 @@ public class NeuralNetwork {
 											// PrevLayerNeuronPos
 
 	private double[][] neuronOutputsErrorSignal; // Layer, NeuronPos
+
+	private static final Logger log = LoggerFactory.getLogger(NeuralNetwork.class);
 
 	public NeuralNetwork(NetworkConfig networkConfig) {
 		super();
@@ -44,13 +50,18 @@ public class NeuralNetwork {
 						networkConfig.getInitialRandomWeightLower(), networkConfig.getInitialRandomWeightHigher());
 			}
 		}
+
+		log.info(
+				"Constructed Network with layers config as {}, learningRate as {}, random weights as {}, random biases as {}",
+				Arrays.toString(neuronsPerLayer), learningRate, Arrays.deepToString(networkWeights),
+				Arrays.deepToString(neuronBiases));
 	}
 
 	public void train(TrainingExample trainingExample) throws InvalidInputException {
 		train(trainingExample.getInput(), trainingExample.getOutput());
 	}
 
-	//feed forward
+	// feed forward
 	public double[] process(double... networkInput) throws InvalidInputException {
 		if (networkInput.length != neuronsPerLayer[0])
 			throw new InvalidInputException();
@@ -77,6 +88,8 @@ public class NeuralNetwork {
 				neuronOutputs[layerIndex][thisLayerNeuronIndex] = activationFunction.apply(temp);
 			}
 		}
+		log.debug("Network Output for input {} is {}", Arrays.toString(networkInput),
+				Arrays.toString(neuronOutputs[neuronsPerLayer.length - 1]));
 		return neuronOutputs[neuronsPerLayer.length - 1];
 	}
 
@@ -90,6 +103,8 @@ public class NeuralNetwork {
 
 		// Calculate the ErrorSignal for all Neurons
 		populateErrorSignalForAllNeurons(desiredOutput);
+		log.debug("Error signal of last layer for input {} is {}", Arrays.toString(input),
+				Arrays.toString(neuronOutputsErrorSignal[neuronsPerLayer.length - 1]));
 
 		// Lets calculate the negative of gradient from ErrorSignal
 		calculateGradientAndUpdateWeightsAndBiases();
