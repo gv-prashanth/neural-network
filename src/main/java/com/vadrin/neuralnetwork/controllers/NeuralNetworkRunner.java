@@ -3,6 +3,7 @@ package com.vadrin.neuralnetwork.controllers;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.Iterator;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,10 +39,13 @@ public class NeuralNetworkRunner implements CommandLineRunner {
 		trainingSet.add(trainingExample2);
 
 		for (int i = 0; i < 10000; i++) {
-			neuralNetwork.train(trainingSet);
-			if (i % 100 == 0) {
-				double[] trainingOutput = neuralNetwork.getOutput();
-				log.info("Training Output is {}", Arrays.toString(trainingOutput));
+			Iterator<TrainingExample> iterator = trainingSet.iterator();
+			while (iterator.hasNext()) {
+				neuralNetwork.train(iterator.next());
+//				if (i % 100 == 0) {
+//					double[] trainingOutput = neuralNetwork.getOutput();
+//					log.info("Training Output is {}", Arrays.toString(trainingOutput));
+//				}
 			}
 		}
 

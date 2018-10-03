@@ -1,13 +1,11 @@
 package com.vadrin.neuralnetwork.services;
 
-import java.util.Iterator;
 import java.util.function.DoubleFunction;
 
 import com.vadrin.neuralnetwork.commons.exceptions.InvalidInputException;
 import com.vadrin.neuralnetwork.commons.utils.ArrayUtils;
 import com.vadrin.neuralnetwork.models.NetworkConfig;
 import com.vadrin.neuralnetwork.models.TrainingExample;
-import com.vadrin.neuralnetwork.models.TrainingSet;
 
 public class NeuralNetwork {
 
@@ -48,23 +46,12 @@ public class NeuralNetwork {
 		}
 	}
 
-	public double[] process(double... networkInput) throws InvalidInputException {
-		feedForward(networkInput);
-		return getOutput();
-	}
-
 	public void train(TrainingExample trainingExample) throws InvalidInputException {
 		train(trainingExample.getInput(), trainingExample.getOutput());
 	}
 
-	public void train(TrainingSet<TrainingExample> trainingSet) throws InvalidInputException {
-		Iterator<TrainingExample> iterator = trainingSet.iterator();
-		while (iterator.hasNext()) {
-			train(iterator.next());
-		}
-	}
-
-	private void feedForward(double... networkInput) throws InvalidInputException {
+	//feed forward
+	public double[] process(double... networkInput) throws InvalidInputException {
 		if (networkInput.length != neuronsPerLayer[0])
 			throw new InvalidInputException();
 
@@ -90,7 +77,7 @@ public class NeuralNetwork {
 				neuronOutputs[layerIndex][thisLayerNeuronIndex] = activationFunction.apply(temp);
 			}
 		}
-
+		return neuronOutputs[neuronsPerLayer.length - 1];
 	}
 
 	// Backproprage
@@ -98,8 +85,8 @@ public class NeuralNetwork {
 		if (input.length != neuronsPerLayer[0] || desiredOutput.length != neuronsPerLayer[neuronsPerLayer.length - 1])
 			throw new InvalidInputException();
 
-		// First feed this input forward
-		feedForward(input);
+		// First feedforward this input forward
+		process(input);
 
 		// Calculate the ErrorSignal for all Neurons
 		populateErrorSignalForAllNeurons(desiredOutput);
@@ -157,11 +144,6 @@ public class NeuralNetwork {
 				neuronBiases[layerIndex][neuronIndex] += negativeOfBiasGradient;
 			}
 		}
-	}
-
-	public double[] getOutput() {
-		// Return last layer output
-		return neuronOutputs[neuronsPerLayer.length - 1];
 	}
 
 }
