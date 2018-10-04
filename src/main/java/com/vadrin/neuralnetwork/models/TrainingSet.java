@@ -24,4 +24,8 @@ public class TrainingSet extends HashSet<TrainingExample> {
 		}
 		return toReturn;
 	}
+
+	public void add(double[] input, double[] output) {
+		this.add(new TrainingExample(input, output));
+	}
 }
