@@ -1,6 +1,7 @@
 package com.vadrin.neuralnetwork.services;
 
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.function.DoubleFunction;
 
 import org.slf4j.Logger;
@@ -10,6 +11,7 @@ import com.vadrin.neuralnetwork.commons.exceptions.InvalidInputException;
 import com.vadrin.neuralnetwork.commons.utils.ArrayUtils;
 import com.vadrin.neuralnetwork.models.NetworkConfig;
 import com.vadrin.neuralnetwork.models.TrainingExample;
+import com.vadrin.neuralnetwork.models.TrainingSet;
 
 public class NeuralNetwork {
 
@@ -57,10 +59,6 @@ public class NeuralNetwork {
 				Arrays.deepToString(neuronBiases));
 	}
 
-	public void train(TrainingExample trainingExample) throws InvalidInputException {
-		train(trainingExample.getInput(), trainingExample.getOutput());
-	}
-
 	// feed forward
 	public double[] process(double... networkInput) throws InvalidInputException {
 		if (networkInput.length != neuronsPerLayer[0])
@@ -91,6 +89,31 @@ public class NeuralNetwork {
 		log.debug("Network Output for input {} is {}", Arrays.toString(networkInput),
 				Arrays.toString(neuronOutputs[neuronsPerLayer.length - 1]));
 		return neuronOutputs[neuronsPerLayer.length - 1];
+	}
+
+	public void train(TrainingSet trainingSet) throws InvalidInputException {
+		Iterator<TrainingExample> iterator = trainingSet.iterator();
+		while (iterator.hasNext()) {
+			TrainingExample thisExample = iterator.next();
+			train(thisExample.getInput(), thisExample.getOutput());
+		}
+		log.debug("Completed Training on given training set.");
+	}
+	
+	public double processAndCompareWithTrainingSetOutput(TrainingSet trainingSet) throws InvalidInputException{
+		Iterator<TrainingExample> iteratorForQualityCheck = trainingSet.iterator();
+		double avgrms = 0;
+		while(iteratorForQualityCheck.hasNext()){
+			TrainingExample thisExample = iteratorForQualityCheck.next();
+			double[] calculatedOutput = process(thisExample.getInput());
+			double rms = 0;
+			for(int i=0; i<calculatedOutput.length; i++){
+				rms += (thisExample.getOutput()[i]-calculatedOutput[i]) * (thisExample.getOutput()[i]-calculatedOutput[i]);
+			}
+			avgrms += rms/calculatedOutput.length;
+		}
+		avgrms = avgrms/trainingSet.size();
+		return Math.sqrt(avgrms);
 	}
 
 	// Backproprage
