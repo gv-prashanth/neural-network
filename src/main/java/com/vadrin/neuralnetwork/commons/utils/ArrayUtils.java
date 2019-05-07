@@ -1,10 +1,12 @@
 package com.vadrin.neuralnetwork.commons.utils;
 
+import com.vadrin.neuralnetwork.commons.exceptions.InvalidInputException;
+
 public class ArrayUtils {
 
-	public static double[] createRandomArray(int size, double lower_bound, double upper_bound) {
+	public static double[] createRandomArray(int size, double lower_bound, double upper_bound) throws InvalidInputException {
 		if (size < 1) {
-			return null;
+			throw new InvalidInputException();
 		}
 		double[] ar = new double[size];
 		for (int i = 0; i < size; i++) {
@@ -13,9 +15,9 @@ public class ArrayUtils {
 		return ar;
 	}
 
-	public static double[][] createRandomArray(int sizeX, int sizeY, double lower_bound, double upper_bound) {
+	public static double[][] createRandomArray(int sizeX, int sizeY, double lower_bound, double upper_bound) throws InvalidInputException {
 		if (sizeX < 1 || sizeY < 1) {
-			return null;
+			throw new InvalidInputException();
 		}
 		double[][] ar = new double[sizeX][sizeY];
 		for (int i = 0; i < sizeX; i++) {

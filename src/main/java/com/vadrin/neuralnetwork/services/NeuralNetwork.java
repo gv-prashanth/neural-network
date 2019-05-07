@@ -1,22 +1,20 @@
 package com.vadrin.neuralnetwork.services;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.Iterator;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.fasterxml.jackson.core.JsonGenerationException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vadrin.neuralnetwork.commons.exceptions.InvalidInputException;
 import com.vadrin.neuralnetwork.commons.exceptions.NetworkNotInitializedException;
 import com.vadrin.neuralnetwork.commons.utils.ArrayUtils;
-import com.vadrin.neuralnetwork.models.TrainingExample;
 import com.vadrin.neuralnetwork.models.DataSet;
+import com.vadrin.neuralnetwork.models.TrainingExample;
+
+/*
+ * Reference video: https://www.youtube.com/playlist?list=PLgomWLYGNl1dL1Qsmgumhcg4HOcWZMd3k
+ */
 
 public class NeuralNetwork {
 
@@ -33,54 +31,56 @@ public class NeuralNetwork {
 	private static final Logger log = LoggerFactory.getLogger(NeuralNetwork.class);
 
 	public NeuralNetwork(int[] neuronsPerLayer, double learningRate, double initialRandomBiasLower,
-			double initialRandomBiasUpper, double initialRandomWeightLower, double initialRandomWeightHigher) {
+			double initialRandomBiasUpper, double initialRandomWeightLower, double initialRandomWeightHigher)
+			throws InvalidInputException {
+		super();
+		loadNeuronsPerLayerAndLearningRate(neuronsPerLayer, learningRate);
+		loadRandomWeightsAndBiases(initialRandomBiasLower, initialRandomBiasUpper, initialRandomWeightLower,
+				initialRandomWeightHigher);
+		loadEmptyOutputAndErrorSignal();
+		log.info(
+				"Constructed Network with layers neuronsPerLayer as {}, learningRate as {}, random weights as {}, random biases as {}",
+				Arrays.toString(neuronsPerLayer), learningRate, Arrays.deepToString(networkWeights),
+				Arrays.deepToString(neuronBiases));
+	}
+	
+	public NeuralNetwork(int[] neuronsPerLayer, double learningRate, double[][] neuronBiases, double[][][] networkWeights) {
 		super();
 		this.neuronsPerLayer = neuronsPerLayer;
 		this.learningRate = learningRate;
-		loadRandomWeightsAndBiases(initialRandomBiasLower, initialRandomBiasUpper, initialRandomWeightLower,
-				initialRandomWeightHigher);
-		initializeNetwork();
+		this.neuronBiases = neuronBiases;
+		this.networkWeights =networkWeights;
+		loadEmptyOutputAndErrorSignal();
 	}
 
-	public NeuralNetwork(JsonNode networkJson) {
-		super();
-		ObjectMapper mapper = new ObjectMapper();
-		this.neuronsPerLayer = mapper.convertValue(networkJson.get("neuronsPerLayer"), int[].class);
-		this.learningRate = mapper.convertValue(networkJson.get("learningRate"), double.class);
-		this.neuronBiases = mapper.convertValue(networkJson.get("neuronBiases"), double[][].class);
-		this.networkWeights = mapper.convertValue(networkJson.get("networkWeights"), double[][][].class);
-		initializeNetwork();
+	private void loadNeuronsPerLayerAndLearningRate(int[] neuronsPerLayer, double learningRate) {
+		this.neuronsPerLayer = neuronsPerLayer;
+		this.learningRate = learningRate;
 	}
 
-	private void initializeNetwork() {
+	private void loadRandomWeightsAndBiases(double initialRandomBiasLower, double initialRandomBiasUpper,
+			double initialRandomWeightLower, double initialRandomWeightHigher) throws InvalidInputException {
+		// Initialize all weights and biases Arrays
+		neuronBiases = new double[neuronsPerLayer.length][];
+		networkWeights = new double[neuronsPerLayer.length][][];
+		for (int i = 0; i < neuronsPerLayer.length; i++) {
+			neuronBiases[i] = ArrayUtils.createRandomArray(neuronsPerLayer[i], initialRandomBiasLower,
+					initialRandomBiasUpper);
+			if (i > 0) {
+				networkWeights[i] = ArrayUtils.createRandomArray(neuronsPerLayer[i], neuronsPerLayer[i - 1],
+						initialRandomWeightLower, initialRandomWeightHigher);
+			}
+		}
+	}
+
+	private void loadEmptyOutputAndErrorSignal() {
+		// Initialize output and errorsignal arrays
 		neuronOutputs = new double[neuronsPerLayer.length][];
 		neuronOutputsErrorSignal = new double[neuronsPerLayer.length][];
 		for (int i = 0; i < neuronsPerLayer.length; i++) {
 			neuronOutputs[i] = new double[neuronsPerLayer[i]];
 			neuronOutputsErrorSignal[i] = new double[neuronsPerLayer[i]];
 		}
-		log.info("Constructed Network with layers config as {}, learningRate as {}", Arrays.toString(neuronsPerLayer),
-				learningRate);
-	}
-
-	private void loadRandomWeightsAndBiases(double initialRandomBiasLower, double initialRandomBiasUpper,
-			double initialRandomWeightLower, double initialRandomWeightHigher) {
-		// Initialize all Arrays
-		neuronBiases = new double[neuronsPerLayer.length][];
-		networkWeights = new double[neuronsPerLayer.length][][];
-		for (int i = 0; i < neuronsPerLayer.length; i++) {
-			// neuronBiases[i] = new double[neuronsPerLayer[i]];
-			neuronBiases[i] = ArrayUtils.createRandomArray(neuronsPerLayer[i], initialRandomBiasLower,
-					initialRandomBiasUpper);
-			if (i > 0) {
-				// networkWeights[i] = new
-				// double[neuronsPerLayer[i]][neuronsPerLayer[i - 1]];
-				networkWeights[i] = ArrayUtils.createRandomArray(neuronsPerLayer[i], neuronsPerLayer[i - 1],
-						initialRandomWeightLower, initialRandomWeightHigher);
-			}
-		}
-		log.debug("Loaded Network with random weights as {}, random biases as {}", Arrays.deepToString(networkWeights),
-				Arrays.deepToString(neuronBiases));
 	}
 
 	// feed forward
@@ -90,11 +90,14 @@ public class NeuralNetwork {
 		if (neuronBiases == null || networkWeights == null || neuronOutputs == null || neuronOutputsErrorSignal == null)
 			throw new NetworkNotInitializedException();
 		// Setting outputs for input layer
-		// Although this will work - this.neuronOutputs[0] = networkInput;
-		// We are doing an activate to given input so that its between 0 & 1
-		// And any input can be give like 5, 10, 1000 for that matter
+		// initially i though that i would need to activate given input so that its
+		// between 0 & 1
+		// And any input can be give like 5, 10, 1000 for that matter. BUt this is wrong
+		// as per the video tutorial https://www.youtube.com/watch?v=aVId8KMsdUU
+		// After research, I understood this is what i have to do -
+		// this.neuronOutputs[0] = networkInput;
 		for (int i = 0; i < neuronsPerLayer[0]; i++) {
-			this.neuronOutputs[0][i] = applySigmiodActivationFunction(networkInput[i]);
+			this.neuronOutputs[0][i] = networkInput[i];
 		}
 
 		// Setting outputs for all other layers.
@@ -120,35 +123,17 @@ public class NeuralNetwork {
 		return 1d / (1d + Math.exp(-input));
 	}
 
-	public void train(DataSet trainingSet) throws InvalidInputException, NetworkNotInitializedException {
+	public void trainALittle(DataSet trainingSet) throws InvalidInputException, NetworkNotInitializedException {
 		Iterator<TrainingExample> iterator = trainingSet.iterator();
 		while (iterator.hasNext()) {
 			TrainingExample thisExample = iterator.next();
-			train(thisExample.getInput(), thisExample.getOutput());
+			trainALittle(thisExample.getInput(), thisExample.getOutput());
 		}
 		log.debug("Completed Training on given training set.");
 	}
 
-	public double processAndCompareWithTrainingSetOutput(DataSet trainingSet)
-			throws InvalidInputException, NetworkNotInitializedException {
-		Iterator<TrainingExample> iteratorForQualityCheck = trainingSet.iterator();
-		double avgrms = 0;
-		while (iteratorForQualityCheck.hasNext()) {
-			TrainingExample thisExample = iteratorForQualityCheck.next();
-			double[] calculatedOutput = process(thisExample.getInput());
-			double rms = 0;
-			for (int i = 0; i < calculatedOutput.length; i++) {
-				rms += (thisExample.getOutput()[i] - calculatedOutput[i])
-						* (thisExample.getOutput()[i] - calculatedOutput[i]);
-			}
-			avgrms += rms / calculatedOutput.length;
-		}
-		avgrms = avgrms / trainingSet.size();
-		return Math.sqrt(avgrms);
-	}
-
-	// Backproprage
-	private void train(double[] input, double[] desiredOutput)
+	// Backpropagate
+	private void trainALittle(double[] input, double[] desiredOutput)
 			throws InvalidInputException, NetworkNotInitializedException {
 		if (desiredOutput.length != neuronsPerLayer[neuronsPerLayer.length - 1])
 			throw new InvalidInputException();
@@ -158,8 +143,6 @@ public class NeuralNetwork {
 
 		// Calculate the ErrorSignal for all Neurons
 		populateSigmoidErrorSignalForAllNeurons(desiredOutput);
-		log.debug("Error signal of last layer for input {} is {}", Arrays.toString(input),
-				Arrays.toString(neuronOutputsErrorSignal[neuronsPerLayer.length - 1]));
 
 		// Lets calculate the negative of gradient from ErrorSignal
 		calculateSigmoidGradientAndUpdateWeightsAndBiases();
@@ -232,10 +215,4 @@ public class NeuralNetwork {
 		return networkWeights;
 	}
 
-	public void saveNetworkToFile(File fileToSave) throws JsonGenerationException, JsonMappingException, IOException {
-		ObjectMapper mapper = new ObjectMapper();
-		mapper.writeValue(fileToSave, this);
-		log.debug("Saved the network to file {}", fileToSave.getAbsolutePath());
-	}
-	
 }

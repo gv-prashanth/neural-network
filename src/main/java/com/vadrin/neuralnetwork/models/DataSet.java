@@ -10,6 +10,7 @@ public class DataSet extends HashSet<TrainingExample> {
 
 	private static final long serialVersionUID = 5558379871625775392L;
 
+	//TODO: Needs cleanup
 	public DataSet getRandomSet(double sizeFactor) {
 		List<TrainingExample> list = new ArrayList<TrainingExample>(this);
 		Collections.shuffle(list);
@@ -21,7 +22,7 @@ public class DataSet extends HashSet<TrainingExample> {
 		// return this;
 	}
 
-	public DataSet getFullSet() {
+	public DataSet get() {
 		return this;
 	}
 
