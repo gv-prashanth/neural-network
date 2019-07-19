@@ -121,14 +121,96 @@ public class NeuralNetwork {
 		return 1d / (1d + Math.exp(-input));
 	}
 
-	public void trainALittle(DataSet trainingSet) throws InvalidInputException, NetworkNotInitializedException {
+	// As per the documentation at
+	// http://ruder.io/optimizing-gradient-descent/?source=post_page
+	// Evaluate gradient for each examples, adjust parameters, and then go for next
+	// example
+	public void trainUsingStochasticGradientDescent(DataSet fullTrainingSet)
+			throws InvalidInputException, NetworkNotInitializedException {
+		log.info("Began Stochastic Gradient Descent on given training set of size {}.", fullTrainingSet.size());
+		Iterator<TrainingExample> iterator = fullTrainingSet.iterator();
+		while (iterator.hasNext()) {
+			TrainingExample thisExample = iterator.next();
+			if (thisExample.getOutput().length != neuronsPerLayer[neuronsPerLayer.length - 1])
+				throw new InvalidInputException();
+
+			// feedForward
+			process(thisExample.getInput());
+
+			// Backpropagate. i.e - get SigmoidErrorSignal for all neurons
+			double[][] temp = getSigmoidErrorSignalForAllNeurons(thisExample.getOutput());
+			calculateSigmoidGradientAndUpdateWeightsAndBiases(temp);
+		}
+		log.info("Completed Stochastic Gradient Descent on given training set.");
+	}
+
+	// As per the documentation at
+	// http://ruder.io/optimizing-gradient-descent/?source=post_page
+	// Fetch a batch, evaluate gradient for batch, adjust parameters, go to next
+	// batch
+	public void trainUsingMiniBatchGradientDescent(DataSet fullTrainingSet, double sizeFactor)
+			throws InvalidInputException, NetworkNotInitializedException {
+		log.info("Began MiniBatch Gradient Descent on given training set of size {} and batch factor {}",
+				fullTrainingSet.size(), sizeFactor);
+
+		// We loop 1/sizeFactor times so that we are approximately sure that we covered
+		// all the training examples in one or the other batch
+		for (int k = 0; k < 1 / sizeFactor; k++) {
+			DataSet randomTrainingBatch = fullTrainingSet.getRandomSet(sizeFactor);
+			log.info("Processing batch number {} with batch size {}", k, randomTrainingBatch.size());
+			double[][] neuronOutputsErrorSignal;
+			neuronOutputsErrorSignal = new double[neuronsPerLayer.length][];
+			for (int i = 0; i < neuronsPerLayer.length; i++) {
+				neuronOutputsErrorSignal[i] = new double[neuronsPerLayer[i]];
+			}
+
+			Iterator<TrainingExample> iterator = randomTrainingBatch.iterator();
+			while (iterator.hasNext()) {
+				TrainingExample thisExample = iterator.next();
+				if (thisExample.getOutput().length != neuronsPerLayer[neuronsPerLayer.length - 1])
+					throw new InvalidInputException();
+
+				// feedForward
+				process(thisExample.getInput());
+
+				// Backpropagate. i.e - get SigmoidErrorSignal for all neurons
+				double[][] temp = getSigmoidErrorSignalForAllNeurons(thisExample.getOutput());
+				for (int i = 0; i < temp.length; i++) {
+					for (int j = 0; j < temp[i].length; j++) {
+						neuronOutputsErrorSignal[i][j] += temp[i][j];
+					}
+				}
+			}
+
+			// divide by number of trainingsets to get average errorsignal over all training
+			// data
+			for (int i = 0; i < neuronOutputsErrorSignal.length; i++) {
+				for (int j = 0; j < neuronOutputsErrorSignal[i].length; j++) {
+					neuronOutputsErrorSignal[i][j] = neuronOutputsErrorSignal[i][j] / randomTrainingBatch.size();
+				}
+			}
+
+			calculateSigmoidGradientAndUpdateWeightsAndBiases(neuronOutputsErrorSignal);
+			log.info("Completed batch number {}", k);
+		}
+		log.info("Completed MiniBatch Gradient Descent on given training set.");
+	}
+
+	// As per the documentation at
+	// http://ruder.io/optimizing-gradient-descent/?source=post_page
+	// Evaluate gradient for all examples first, calculate average of it, and then
+	// adjust parameters in one shot (bias, weights)
+	public void trainUsingFullBatchGradientDescent(DataSet fullTrainingSet)
+			throws InvalidInputException, NetworkNotInitializedException {
+		log.info("Began Full Batch Gradient Descent on given training set.");
+
 		double[][] neuronOutputsErrorSignal;
 		neuronOutputsErrorSignal = new double[neuronsPerLayer.length][];
 		for (int i = 0; i < neuronsPerLayer.length; i++) {
 			neuronOutputsErrorSignal[i] = new double[neuronsPerLayer[i]];
 		}
 
-		Iterator<TrainingExample> iterator = trainingSet.iterator();
+		Iterator<TrainingExample> iterator = fullTrainingSet.iterator();
 		while (iterator.hasNext()) {
 			TrainingExample thisExample = iterator.next();
 			if (thisExample.getOutput().length != neuronsPerLayer[neuronsPerLayer.length - 1])
@@ -150,13 +232,16 @@ public class NeuralNetwork {
 		// data
 		for (int i = 0; i < neuronOutputsErrorSignal.length; i++) {
 			for (int j = 0; j < neuronOutputsErrorSignal[i].length; j++) {
-				neuronOutputsErrorSignal[i][j] = neuronOutputsErrorSignal[i][j] / trainingSet.size();
+				neuronOutputsErrorSignal[i][j] = neuronOutputsErrorSignal[i][j] / fullTrainingSet.size();
 			}
 		}
 
+		log.info(
+				"Error signal calculation for complete training set is done. Calculating gradient and updating weights.");
+
 		calculateSigmoidGradientAndUpdateWeightsAndBiases(neuronOutputsErrorSignal);
 
-		log.debug("Completed Training on given training set.");
+		log.info("Completed Full Batch Gradient Descent on given training set.");
 	}
 
 	private double[][] getSigmoidErrorSignalForAllNeurons(double[] desiredOutput) {
