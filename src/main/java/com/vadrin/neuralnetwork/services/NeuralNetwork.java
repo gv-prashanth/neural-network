@@ -26,7 +26,6 @@ public class NeuralNetwork {
 											// PrevLayerNeuronPos
 
 	private double[][] neuronOutputs; // Layer, NeuronPos
-	private double[][] neuronOutputsErrorSignal; // Layer, NeuronPos
 
 	private static final Logger log = LoggerFactory.getLogger(NeuralNetwork.class);
 
@@ -43,13 +42,14 @@ public class NeuralNetwork {
 				Arrays.toString(neuronsPerLayer), learningRate, Arrays.deepToString(networkWeights),
 				Arrays.deepToString(neuronBiases));
 	}
-	
-	public NeuralNetwork(int[] neuronsPerLayer, double learningRate, double[][] neuronBiases, double[][][] networkWeights) {
+
+	public NeuralNetwork(int[] neuronsPerLayer, double learningRate, double[][] neuronBiases,
+			double[][][] networkWeights) {
 		super();
 		this.neuronsPerLayer = neuronsPerLayer;
 		this.learningRate = learningRate;
 		this.neuronBiases = neuronBiases;
-		this.networkWeights =networkWeights;
+		this.networkWeights = networkWeights;
 		loadEmptyOutputAndErrorSignal();
 	}
 
@@ -76,10 +76,8 @@ public class NeuralNetwork {
 	private void loadEmptyOutputAndErrorSignal() {
 		// Initialize output and errorsignal arrays
 		neuronOutputs = new double[neuronsPerLayer.length][];
-		neuronOutputsErrorSignal = new double[neuronsPerLayer.length][];
 		for (int i = 0; i < neuronsPerLayer.length; i++) {
 			neuronOutputs[i] = new double[neuronsPerLayer[i]];
-			neuronOutputsErrorSignal[i] = new double[neuronsPerLayer[i]];
 		}
 	}
 
@@ -87,7 +85,7 @@ public class NeuralNetwork {
 	public double[] process(double... networkInput) throws InvalidInputException, NetworkNotInitializedException {
 		if (networkInput.length != neuronsPerLayer[0])
 			throw new InvalidInputException();
-		if (neuronBiases == null || networkWeights == null || neuronOutputs == null || neuronOutputsErrorSignal == null)
+		if (neuronBiases == null || networkWeights == null || neuronOutputs == null)
 			throw new NetworkNotInitializedException();
 		// Setting outputs for input layer
 		// initially i though that i would need to activate given input so that its
@@ -124,31 +122,52 @@ public class NeuralNetwork {
 	}
 
 	public void trainALittle(DataSet trainingSet) throws InvalidInputException, NetworkNotInitializedException {
+		double[][] neuronOutputsErrorSignal;
+		neuronOutputsErrorSignal = new double[neuronsPerLayer.length][];
+		for (int i = 0; i < neuronsPerLayer.length; i++) {
+			neuronOutputsErrorSignal[i] = new double[neuronsPerLayer[i]];
+		}
+
 		Iterator<TrainingExample> iterator = trainingSet.iterator();
 		while (iterator.hasNext()) {
 			TrainingExample thisExample = iterator.next();
-			trainALittle(thisExample.getInput(), thisExample.getOutput());
+			if (thisExample.getOutput().length != neuronsPerLayer[neuronsPerLayer.length - 1])
+				throw new InvalidInputException();
+
+			// feedForward
+			process(thisExample.getInput());
+
+			// Backpropagate. i.e - get SigmoidErrorSignal for all neurons
+			double[][] temp = getSigmoidErrorSignalForAllNeurons(thisExample.getOutput());
+			for (int i = 0; i < temp.length; i++) {
+				for (int j = 0; j < temp[i].length; j++) {
+					neuronOutputsErrorSignal[i][j] += temp[i][j];
+				}
+			}
 		}
+
+		// divide by number of trainingsets to get average errorsignal over all training
+		// data
+		for (int i = 0; i < neuronOutputsErrorSignal.length; i++) {
+			for (int j = 0; j < neuronOutputsErrorSignal[i].length; j++) {
+				neuronOutputsErrorSignal[i][j] = neuronOutputsErrorSignal[i][j] / trainingSet.size();
+			}
+		}
+
+		calculateSigmoidGradientAndUpdateWeightsAndBiases(neuronOutputsErrorSignal);
+
 		log.debug("Completed Training on given training set.");
 	}
 
-	// Backpropagate
-	private void trainALittle(double[] input, double[] desiredOutput)
-			throws InvalidInputException, NetworkNotInitializedException {
-		if (desiredOutput.length != neuronsPerLayer[neuronsPerLayer.length - 1])
-			throw new InvalidInputException();
+	private double[][] getSigmoidErrorSignalForAllNeurons(double[] desiredOutput) {
 
-		// First feedforward this input forward
-		process(input);
+		// lets initialize an empty toReturn array
+		double[][] toReturn;
+		toReturn = new double[neuronsPerLayer.length][];
+		for (int i = 0; i < neuronsPerLayer.length; i++) {
+			toReturn[i] = new double[neuronsPerLayer[i]];
+		}
 
-		// Calculate the ErrorSignal for all Neurons
-		populateSigmoidErrorSignalForAllNeurons(desiredOutput);
-
-		// Lets calculate the negative of gradient from ErrorSignal
-		calculateSigmoidGradientAndUpdateWeightsAndBiases();
-	}
-
-	private void populateSigmoidErrorSignalForAllNeurons(double[] desiredOutput) {
 		// Lets calculate the ErrorSignal for output layer
 		for (int neuronIndex = 0; neuronIndex < neuronsPerLayer[neuronsPerLayer.length - 1]; neuronIndex++) {
 			// OutputError = (Output - Desired)
@@ -156,7 +175,7 @@ public class NeuralNetwork {
 					- desiredOutput[neuronIndex];
 
 			// ErrorSignal = OutputError * (output) * (1-output)
-			neuronOutputsErrorSignal[neuronsPerLayer.length - 1][neuronIndex] = neuronOutputsError
+			toReturn[neuronsPerLayer.length - 1][neuronIndex] = neuronOutputsError
 					* neuronOutputs[neuronsPerLayer.length - 1][neuronIndex]
 					* (1d - neuronOutputs[neuronsPerLayer.length - 1][neuronIndex]);
 		}
@@ -170,16 +189,18 @@ public class NeuralNetwork {
 				for (int nextLayerNeuronIndex = 0; nextLayerNeuronIndex < neuronsPerLayer[layerIndex
 						+ 1]; nextLayerNeuronIndex++) {
 					temp += networkWeights[layerIndex + 1][nextLayerNeuronIndex][neuronIndex]
-							* neuronOutputsErrorSignal[layerIndex + 1][nextLayerNeuronIndex];
+							* toReturn[layerIndex + 1][nextLayerNeuronIndex];
 				}
 				// ErrorSignal = OutputError * (output) * (1-output)
-				neuronOutputsErrorSignal[layerIndex][neuronIndex] = temp * neuronOutputs[layerIndex][neuronIndex]
+				toReturn[layerIndex][neuronIndex] = temp * neuronOutputs[layerIndex][neuronIndex]
 						* (1d - neuronOutputs[layerIndex][neuronIndex]);
 			}
 		}
+
+		return toReturn;
 	}
 
-	private void calculateSigmoidGradientAndUpdateWeightsAndBiases() {
+	private void calculateSigmoidGradientAndUpdateWeightsAndBiases(double[][] neuronOutputsErrorSignal) {
 		for (int layerIndex = (neuronsPerLayer.length - 1); layerIndex > 0; layerIndex--) {
 			for (int neuronIndex = 0; neuronIndex < neuronsPerLayer[layerIndex]; neuronIndex++) {
 				for (int prevNeuronIndex = 0; prevNeuronIndex < neuronsPerLayer[layerIndex - 1]; prevNeuronIndex++) {
