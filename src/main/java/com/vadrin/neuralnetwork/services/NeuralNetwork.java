@@ -14,6 +14,7 @@ import com.vadrin.neuralnetwork.models.TrainingExample;
 
 /*
  * Reference video: https://www.youtube.com/playlist?list=PLgomWLYGNl1dL1Qsmgumhcg4HOcWZMd3k
+ * Reference Site: http://ruder.io/optimizing-gradient-descent/?source=post_page
  */
 
 public class NeuralNetwork {
@@ -319,6 +320,10 @@ public class NeuralNetwork {
 
 	public double[][][] getNetworkWeights() {
 		return networkWeights;
+	}
+
+	public void setLearningRate(double learningRate) {
+		this.learningRate = learningRate;
 	}
 
 }
