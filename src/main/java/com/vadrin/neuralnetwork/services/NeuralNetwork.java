@@ -6,6 +6,8 @@ import java.util.Iterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vadrin.neuralnetwork.commons.exceptions.InvalidInputException;
 import com.vadrin.neuralnetwork.commons.exceptions.NetworkNotInitializedException;
 import com.vadrin.neuralnetwork.commons.utils.ArrayUtils;
@@ -37,7 +39,7 @@ public class NeuralNetwork {
 		loadNeuronsPerLayerAndLearningRate(neuronsPerLayer, learningRate);
 		loadRandomWeightsAndBiases(initialRandomBiasLower, initialRandomBiasUpper, initialRandomWeightLower,
 				initialRandomWeightHigher);
-		loadEmptyOutputAndErrorSignal();
+		loadEmptyNeuronOutputs();
 		log.info(
 				"Constructed Network with layers neuronsPerLayer as {}, learningRate as {}, random weights as {}, random biases as {}",
 				Arrays.toString(neuronsPerLayer), learningRate, Arrays.deepToString(networkWeights),
@@ -51,7 +53,26 @@ public class NeuralNetwork {
 		this.learningRate = learningRate;
 		this.neuronBiases = neuronBiases;
 		this.networkWeights = networkWeights;
-		loadEmptyOutputAndErrorSignal();
+		loadEmptyNeuronOutputs();
+		log.info(
+				"Constructed Network with layers neuronsPerLayer as {}, learningRate as {}, random weights as {}, random biases as {}",
+				Arrays.toString(neuronsPerLayer), learningRate, Arrays.deepToString(networkWeights),
+				Arrays.deepToString(neuronBiases));
+	}
+	
+	public NeuralNetwork(JsonNode networkJson) {
+		super();
+		ObjectMapper mapper = new ObjectMapper();
+		
+		this.neuronsPerLayer = mapper.convertValue(networkJson.get("neuronsPerLayer"), int[].class);
+		this.learningRate = mapper.convertValue(networkJson.get("learningRate"), double.class);
+		this.neuronBiases = mapper.convertValue(networkJson.get("neuronBiases"), double[][].class);
+		this.networkWeights = mapper.convertValue(networkJson.get("networkWeights"), double[][][].class);
+		loadEmptyNeuronOutputs();
+		log.info(
+				"Constructed Network with layers neuronsPerLayer as {}, learningRate as {}, random weights as {}, random biases as {}",
+				Arrays.toString(neuronsPerLayer), learningRate, Arrays.deepToString(networkWeights),
+				Arrays.deepToString(neuronBiases));
 	}
 
 	private void loadNeuronsPerLayerAndLearningRate(int[] neuronsPerLayer, double learningRate) {
@@ -74,8 +95,8 @@ public class NeuralNetwork {
 		}
 	}
 
-	private void loadEmptyOutputAndErrorSignal() {
-		// Initialize output and errorsignal arrays
+	private void loadEmptyNeuronOutputs() {
+		// Initialize empty output
 		neuronOutputs = new double[neuronsPerLayer.length][];
 		for (int i = 0; i < neuronsPerLayer.length; i++) {
 			neuronOutputs[i] = new double[neuronsPerLayer[i]];
@@ -320,10 +341,6 @@ public class NeuralNetwork {
 
 	public double[][][] getNetworkWeights() {
 		return networkWeights;
-	}
-
-	public void setLearningRate(double learningRate) {
-		this.learningRate = learningRate;
 	}
 
 }
