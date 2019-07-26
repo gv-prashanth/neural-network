@@ -6,11 +6,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+//TODO: This name needs to be changed. And We are using dataset for both training and test sets.. 
+//But the class extends TrainingExample class which is confusing. Needs to be fixed.
 public class DataSet extends HashSet<TrainingExample> {
 
 	private static final long serialVersionUID = 5558379871625775392L;
 
-	//TODO: Needs cleanup
+	// TODO: Needs cleanup
 	public DataSet getRandomSet(double sizeFactor) {
 		List<TrainingExample> list = new ArrayList<TrainingExample>(this);
 		Collections.shuffle(list);
