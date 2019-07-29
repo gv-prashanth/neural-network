@@ -179,7 +179,7 @@ public class NeuralNetwork {
 		// all the training examples in one or the other batch
 		for (int k = 0; k < 1 / sizeFactor; k++) {
 			DataSet randomTrainingBatch = fullTrainingSet.getRandomSet(sizeFactor);
-			log.info("Processing batch number {} with batch size {}", k, randomTrainingBatch.size());
+			//log.info("Processing batch number {} with batch size {}", k, randomTrainingBatch.size());
 			double[][] neuronOutputsErrorSignal;
 			neuronOutputsErrorSignal = new double[neuronsPerLayer.length][];
 			for (int i = 0; i < neuronsPerLayer.length; i++) {
@@ -213,7 +213,7 @@ public class NeuralNetwork {
 			}
 
 			calculateSigmoidGradientAndUpdateWeightsAndBiases(neuronOutputsErrorSignal);
-			log.info("Completed batch number {}", k);
+			//log.info("Completed batch number {}", k);
 		}
 		log.info("Completed MiniBatch Gradient Descent on given training set.");
 	}
